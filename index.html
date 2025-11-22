@@ -1,0 +1,140 @@
+#
+# This is a Shiny web application. You can run the application by clicking
+# the 'Run App' button above.
+#
+# Find out more about building applications with Shiny here:
+#
+#    https://shiny.posit.co/
+#
+
+library(shiny)
+library(dplyr)
+library(plotly)
+
+parking<-read.csv("/Users/cuauhtemocescobar/Desktop/Data Modeling/Shiny/Newsroom3/Parking - NewsRoom 3.csv")
+ui <- fluidPage(
+  tags$style("body{
+             background-color:#fff6df;}"), #change background color
+  titlePanel("The Central Problem with Binghamton's Parking Availability"),
+  HTML("<p>Data Collection and Tables By: Sydney Pawelczyk, Written By: William Kao, Edited by: Kaymora Roberts and Cuauhtemoc Escobar</p>"),
+  fluidRow(
+    column(4,
+           tags$img(
+             src="Parking1.jpeg",
+             width="100%",
+             style="border: 1px solid #ccc"
+           )
+    ),
+    column(3,
+           tags$img(
+             src="Parking3.jpeg",
+             width="80%",
+             style="border: 1px solid #ccc"
+           )
+    ),
+    column(3,
+           tags$img(
+             src="Parking2.jpeg",
+             width="80%",
+             style="border: 1px solid #ccc"
+           )
+    )
+  ),
+  selectInput(
+    "var",
+    "Which Bad Parking Spot Would You Choose?",
+    choices=list("Left","Center","Right")
+  ),
+  textOutput("selected_var"),
+  HTML("<br> </br>"),
+  HTML("<p>The Great Migration. Thousands of cars drive in new paths every single day onto the SUNY Binghamton Campus, but where do they go? One of the biggest problems the University faces is parking availability and a lack thereof. Being in a rush compromises many students’ abilities to drive and park correctly. In their rushed state, the parking jobs found in multiple lots are, to say the very least, sub-par. This is the central problem with Binghamton’s parking; while students are circling the inner lots for the few poorly parked spaces available, there are hundreds of spots open down the road.</p>"),
+  
+  fluidRow(
+    HTML("<h3>Weekday Parking Availability</h3>"),
+    column(3, 
+           wellPanel( 
+             h4("Filter"),
+             selectInput("Day", "Select Day", 
+                         choices = unique(parking$Day)),
+             selectInput("Time", "Select Time",
+                         choices = unique(parking$Time)),
+             selectInput("Lot", "Select Lot",
+                         choices = c("All", unique(parking$Lot)))
+           )),
+    column(9,
+           plotlyOutput("plot")), #look for a plot to put here
+    
+    column(10,
+           HTML("<h4>Parking Trends on Campus</h4>",
+                "<p>So, is the problem really how much parking there is or where it is located?
+
+The data tells a clear story. Lots closest to the academic buildings, such as F1, M2, and Y1, are in high demand from 8am to 2pm. 
+
+<br>
+On a typical Tuesday, lots like F1 have single-digit spaces available, which may even be zero. 
+Lot M2 follows the same pattern, with the data showing as low as 6 spots at the same time. 
+</br>
+<br>
+Half a mile away in lots M1, M3, M4, and G1, there are hundreds of spaces available, but who wants to walk that far in the cold?
+
+The only point in the data that stands out is that there are more spots available on Fridays. Several lots report nearly double or even triple the number of open spaces compared with Monday through Thursday. This is likely due to student scheduling and the weekend following.
+</br>
+<br>
+
+When students budget their time to make it to class on time and don’t account for 10 extra minutes to find a parking spot, they are found circling lot F in despair before being forced to park deep in M2, missing the first part of their lectures. The demand for parking is highly concentrated in one area, while the supply is concentrated in another.
+
+</br>
+
+<br>
+
+ The real solution comes in the form of distribution, not supply. We can see there is plenty of parking on campus for all commuter students, but the problem lies in where it is located. 
+
+</br>
+<br>
+So what can we do to fix this? There has to be an incentive for students to park in the farther lots voluntarily. By creating a discounted parking pass for students who only park in farther lots, the premium price of using the closer lots becomes less in demand. By utilizing a multi-tier parking pass model, the flow of cars into the high-demand areas would soften. A simple fix to a supply and demand problem to offer clear paths for students to park and allow for extra time to make it to their lectures on time.
+</br>
+
+</p>"))
+    
+  )
+)
+
+server <- function(input, output) {
+  
+  output$selected_var<-renderText({
+    paste("If you picked",input$var, "you'd be wrong!")
+  })
+  
+  filtered_data<-reactive({ 
+    parking %>% 
+      filter(Day == input$Day) %>% 
+      filter(Time == input$Time) %>% 
+      filter(if(input$Lot=="All")TRUE 
+             else Lot ==input$Lot)
+  })
+  Bing_Colors <- c("E"= "#CEDC00","F"= "#EBF199", "F1"="#DCDFB7", "F2" = "#C4E7B7","F3" = "#A7DA92","G1" = "#509C4E","H" = "#CBDBC5",
+                   "M1"="#005A43","M2"= "#669C8E","M3,4" = "#6CC24A","Y1" = "#BDBEBD","ZZN" = "#9C9D9D","ZZS" = "#5A5C5B"
+  )
+  output$plot <- renderPlotly({
+    data <-filtered_data()
+    p <-ggplot(data,aes(x=Lot,y=Availability, fill=Lot, 
+                        text=paste("Lot:", Lot,
+                                   "<br>Availability:",
+                                   Availability))) +
+      geom_bar(stat="identity")+ 
+      labs(title= paste("Parking Availability on", input$Day,
+                        "at", input$Time),
+           x="Lot",
+           y="Available Spaces") +
+      scale_fill_manual(values=Bing_Colors)
+    #theme_minimal()
+    theme(
+    panel.background=element_rect(fill="#fff6df"), #change bg of graph color
+    plot.background=element_rect(fill="#fff6df"), #change outer outline of graph color
+    legend.background=element_rect(fill="#fff6df")) #legend bg color 
+    ggplotly(p,tooltip="text")
+
+  })
+}
+
+shinyApp(ui = ui, server = server)
